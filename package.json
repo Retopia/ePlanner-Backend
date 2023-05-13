@@ -1,0 +1,37 @@
+{
+  "name": "final-project-retopia",
+  "version": "1.0.0",
+  "description": "ePlanner is an intuitive, streamlined, and efficient application designed to help you and your friends or coworkers effortlessly plan events or meetings. Users can easily create events and invite others, even those without an account, fostering seamless collaboration. Each event includes a detailed description, a specified time and location, and the option to embed supplementary materials such as Word documents, PDFs, and various media like images and videos.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nyu-csci-ua-0467-001-002-spring-2023/final-project-Retopia.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nyu-csci-ua-0467-001-002-spring-2023/final-project-Retopia/issues"
+  },
+  "homepage": "https://github.com/nyu-csci-ua-0467-001-002-spring-2023/final-project-Retopia#readme",
+  "devDependencies": {
+    "@sendgrid/mail": "^7.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "google-auth-library": "^8.7.0",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.2",
+    "node-fetch": "^3.3.1",
+    "passport": "^0.6.0",
+    "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "tar": "^6.1.13"
+  }
+}
