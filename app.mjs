@@ -13,6 +13,37 @@ import sgMail from '@sendgrid/mail';
 import fetch from 'node-fetch';
 
 dotenv.config();
+let lastDBActivity = Date.now();
+let nextPingInterval = getRandomInterval(MIN_INTERVAL, MAX_INTERVAL);
+let isPinging = false; 
+
+// Helper function to ping the database
+async function pingDatabase() {
+    try {
+        await mongoose.connection.db.admin().ping();
+        console.log('Database pinged successfully');
+    } catch (error) {
+        console.error('Error pinging database:', error);
+    }
+}
+
+function getRandomInterval(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+app.use(async (req, res, next) => {
+    const now = Date.now();
+
+    if (!isPinging && now - lastDBActivity > nextPingInterval) {
+        isPinging = true; // Lock to prevent multiple pings
+        await pingDatabase();
+        lastDBActivity = now;
+        nextPingInterval = getRandomInterval(MIN_INTERVAL, MAX_INTERVAL); // Set new interval after each ping
+        isPinging = false; // Unlock after ping is done
+    }
+
+    next();
+});
 
 // Setting up sendgrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -548,8 +579,6 @@ app.get('/is-google-user/:email', async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
-
-
 
 // Run the server and print out
 app.listen(process.env.PORT || 4000, () => {

@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "final-project-retopia": "file:",
     "tar": "^6.1.13"
   }
 }
