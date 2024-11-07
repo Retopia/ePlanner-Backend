@@ -33,6 +33,7 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "final-project-retopia": "file:",
+    "nodemailer": "^6.9.16",
     "tar": "^6.1.13"
   }
 }

@@ -9,44 +9,11 @@ import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import { OAuth2Client } from 'google-auth-library';
-import sgMail from '@sendgrid/mail';
+import emailService from './emailService.mjs';
 import fetch from 'node-fetch';
 
 dotenv.config();
-let lastDBActivity = Date.now();
-let nextPingInterval = getRandomInterval(MIN_INTERVAL, MAX_INTERVAL);
-let isPinging = false; 
 
-// Helper function to ping the database
-async function pingDatabase() {
-    try {
-        await mongoose.connection.db.admin().ping();
-        console.log('Database pinged successfully');
-    } catch (error) {
-        console.error('Error pinging database:', error);
-    }
-}
-
-function getRandomInterval(min, max) {
-    return Math.floor(Math.random() * (max - min + 1) + min);
-}
-
-app.use(async (req, res, next) => {
-    const now = Date.now();
-
-    if (!isPinging && now - lastDBActivity > nextPingInterval) {
-        isPinging = true; // Lock to prevent multiple pings
-        await pingDatabase();
-        lastDBActivity = now;
-        nextPingInterval = getRandomInterval(MIN_INTERVAL, MAX_INTERVAL); // Set new interval after each ping
-        isPinging = false; // Unlock after ping is done
-    }
-
-    next();
-});
-
-// Setting up sendgrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const app = express();
 
 // Cors allows from everywhere
@@ -97,6 +64,43 @@ passport.use(
         },
     ),
 );
+
+
+let lastDBActivity = Date.now();
+
+const MIN_INTERVAL = 9 * 60 * 1000; // 9 minutes
+const MAX_INTERVAL = 11 * 60 * 1000; // 11 minutes
+
+let nextPingInterval = getRandomInterval(MIN_INTERVAL, MAX_INTERVAL);
+let isPinging = false;
+
+// Helper function to ping the database
+async function pingDatabase() {
+    try {
+        await mongoose.connection.db.admin().ping();
+        console.log('Database pinged successfully');
+    } catch (error) {
+        console.error('Error pinging database:', error);
+    }
+}
+
+function getRandomInterval(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+app.use(async (req, res, next) => {
+    const now = Date.now();
+
+    if (!isPinging && now - lastDBActivity > nextPingInterval) {
+        isPinging = true; // Lock to prevent multiple pings
+        await pingDatabase();
+        lastDBActivity = now;
+        nextPingInterval = getRandomInterval(MIN_INTERVAL, MAX_INTERVAL); // Set new interval after each ping
+        isPinging = false; // Unlock after ping is done
+    }
+
+    next();
+});
 
 // Function for generating JWT
 function generateAccessToken(user) {
@@ -443,6 +447,7 @@ function generateToken(length) {
     return result;
 }
 
+// New version of forgot-password using NodeMailer instead of SendGrid API
 app.post('/forgot-password', async (req, res) => {
     const { email, captcha } = req.body;
 
@@ -455,45 +460,31 @@ app.post('/forgot-password', async (req, res) => {
     });
 
     const captchaData = await captchaResponse.json();
-
     if (!captchaData.success) {
         return res.status(400).json({ error: 'Invalid captcha' });
     }
 
     try {
-        // Find the user by email
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ error: 'User not found' });
         }
 
-        // Generate a token and create a new ResetToken document
         const token = generateToken(32);
+
+        // Create reset token document
         const resetToken = new ResetToken({
             userId: user._id,
             token,
         });
 
-        // Send the reset password email with the token
-        const resetLink = process.env.FRONTEND_ADDRESS + `/reset-password/${token}`;
-        const msg = {
-            to: email,
-            from: 'noreply.eplanner@gmail.com',
-            subject: 'Reset Your Password',
-            text: `Please use the following link to reset your password: ${resetLink}`,
-            html: `<p>Please use the following link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
-        };
-        console.log('Sending email...');
-        await sgMail.send(msg);
-        console.log('Email sent.');
+        await emailService.sendPasswordResetEmail(email, token);
+        await resetToken.save();
 
         res.status(200).json({ message: 'Password reset email sent' });
-
-        // Finally we save the token
-        await resetToken.save();
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Password reset error:', error);
+        res.status(500).json({ error: 'Failed to send password reset email' });
     }
 });
 
